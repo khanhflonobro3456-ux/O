@@ -1,0 +1,89 @@
+--// FAST ATTACK MAX SPEED by AndepZai
+
+_G.FastAttack = true
+
+if not _G.FastAttack then return end
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Player = Players.LocalPlayer
+local Character = Player.Character or Player.CharacterAdded:Wait()
+
+local Enemies = workspace:WaitForChild("Enemies")
+local Characters = workspace:WaitForChild("Characters")
+
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local Modules = ReplicatedStorage:WaitForChild("Modules")
+local Net = Modules:WaitForChild("Net")
+
+local RegisterAttack = Net:WaitForChild("RE/RegisterAttack")
+local RegisterHit = Net:WaitForChild("RE/RegisterHit")
+
+local Settings = {
+    AutoClick = true,
+    Distance = 500 -- range đánh
+}
+
+local function IsAlive(Char)
+    return Char and Char:FindFirstChild("Humanoid") and Char.Humanoid.Health > 0
+end
+
+local function GetEquipped()
+    if not IsAlive(Player.Character) then return nil end
+    return Player.Character:FindFirstChildOfClass("Tool")
+end
+
+local function GetEnemies()
+    local tbl = {}
+
+    for _, mob in pairs(Enemies:GetChildren()) do
+        local head = mob:FindFirstChild("Head")
+        if head and IsAlive(mob) and (Player:DistanceFromCharacter(head.Position) <= Settings.Distance) then
+            table.insert(tbl, {mob, head})
+        end
+    end
+
+    for _, plr in pairs(Characters:GetChildren()) do
+        local head = plr:FindFirstChild("Head")
+        if head and IsAlive(plr) and plr ~= Player.Character and (Player:DistanceFromCharacter(head.Position) <= Settings.Distance) then
+            table.insert(tbl, {plr, head})
+        end
+    end
+
+    return tbl
+end
+
+local function FastAttack()
+    local tool = GetEquipped()
+    if not tool or tool.ToolTip == "Gun" then return end
+
+    local targets = GetEnemies()
+    if #targets == 0 then return end
+
+    local hits = {}
+    local mainPart = nil
+
+    for _, v in pairs(targets) do
+        table.insert(hits, v)
+        mainPart = v[2]
+    end
+
+    if mainPart then
+        RegisterAttack:FireServer(0)
+
+        -- double hit mỗi frame
+        RegisterHit:FireServer(mainPart, hits)
+        RegisterHit:FireServer(mainPart, hits)
+    end
+end
+
+--// chạy mỗi frame -> nhanh nhất
+RunService.Heartbeat:Connect(function()
+    if Settings.AutoClick then
+        pcall(FastAttack)
+    end
+end)
+
+print("✅ FastAttack MAX SPEED Loaded!")
